@@ -1,41 +1,76 @@
-/* 儅僂僗娭學 */
+/***************************************************************************************
+ *	FileName					:	mouse.c
+ *	CopyRight					:	1.0
+ *	ModuleName					:	mouse management module
+ *
+ *	Create Data					:	2016/01/06
+ *	Author/Corportation			:	ZhuoJianhuan
+ *
+ *	Abstract Description		:	鼠标输入模块管理
+ *
+ *--------------------------------Revision History--------------------------------------
+ *	No	version		Date			Revised By			Item			Description
+ *	1	v1.0		2016/01/06		ZhuoJianhuan						Create this file
+ *
+ ***************************************************************************************/
+/**************************************************************
+*	Debug switch Section
+**************************************************************/
 
+/**************************************************************
+*	Include File Section
+**************************************************************/
 #include "bootpack.h"
-
-struct FIFO32 *mousefifo;
-int mousedata0;
-
-void inthandler2c(int *esp)
-/* PS/2儅僂僗偐傜偺妱傝崬傒 */
-{
-	int data;
-	io_out8(PIC1_OCW2, 0x64);	/* IRQ-12庴晅姰椆傪PIC1偵捠抦 */
-	io_out8(PIC0_OCW2, 0x62);	/* IRQ-02庴晅姰椆傪PIC0偵捠抦 */
-	data = io_in8(PORT_KEYDAT);
-	fifo32_put(mousefifo, data + mousedata0);
-	return;
-}
-
+/**************************************************************
+*	Macro Define Section
+**************************************************************/
+/**************************************************************
+*	Struct Define Section
+**************************************************************/
 #define KEYCMD_SENDTO_MOUSE		0xd4
 #define MOUSECMD_ENABLE			0xf4
-
-void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec)
-{
-	/* 彂偒崬傒愭偺FIFO僶僢僼傽傪婰壇 */
+/**************************************************************
+*	Prototype Declare Section
+**************************************************************/
+/**************************************************************
+*	Global Variable Declare Section
+**************************************************************/
+struct FIFO32 *mousefifo;		//鼠标关联的缓冲区
+int mousedata0;					//鼠标关键字
+/**************************************************************
+*	File Static Variable Define Section
+**************************************************************/
+/**************************************************************
+*	Function Define Section
+**************************************************************/
+/**
+ *	@description	使能鼠标模块
+ *	@param			fifo：鼠标关联的缓冲区
+ *					data0：鼠标关键字
+ *					mdec：鼠标描述符
+ */
+void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec){
 	mousefifo = fifo;
 	mousedata0 = data0;
-	/* 儅僂僗桳岠 */
+
+	//TODO 等待鼠标就绪
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD, KEYCMD_SENDTO_MOUSE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT, MOUSECMD_ENABLE);
-	/* 偆傑偔偄偔偲ACK(0xfa)偑憲怣偝傟偰偔傞 */
-	mdec->phase = 0; /* 儅僂僗偺0xfa傪懸偭偰偄傞抜奒 */
+	
+	//TODO 初始化鼠标接收状态
+	mdec->phase = 0;
 	return;
 }
 
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat)
-{
+/**
+ *	@description	解码鼠标
+ *	@param			mdec：鼠标描述符
+ *					dat：当前的鼠标输入
+ *	@return			接收到输入返回1，否则返回0，返回-1表示发生错误
+ */
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat){
 	if (mdec->phase == 0) {
 		/* 儅僂僗偺0xfa傪懸偭偰偄傞抜奒 */
 		if (dat == 0xfa) {
@@ -74,5 +109,20 @@ int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat)
 		mdec->y = - mdec->y; /* 儅僂僗偱偼y曽岦偺晞崋偑夋柺偲斀懳 */
 		return 1;
 	}
-	return -1; /* 偙偙偵棃傞偙偲偼側偄偼偢 */
+
+	//TODO 程序运行到这里表示发生错误
+	return -1;
 }
+
+/**
+ *	@description	鼠标中断服务函数
+ */
+void inthandler2c(int *esp){
+	int data;
+	io_out8(PIC1_OCW2, 0x64);	//清空PIC1 IRQ-12中断标志
+	io_out8(PIC0_OCW2, 0x62);	//清空PIC0 IRQ-02中断标志
+	data = io_in8(PORT_KEYDAT);
+	fifo32_put(mousefifo, data + mousedata0);
+	return;
+}
+

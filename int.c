@@ -1,26 +1,66 @@
-/* 妱傝崬傒娭學 */
+/***************************************************************************************
+ *	FileName					:	mtask.c
+ *	CopyRight					:	1.0
+ *	ModuleName					:	multi task management module
+ *
+ *	Create Data					:	2016/01/06
+ *	Author/Corportation			:	ZhuoJianhuan
+ *
+ *	Abstract Description		:	多任务管理的实现文件
+ *									task->flags = 2;表示正在运行中
+ *									task->flags = 1;表示正在使用中
+ *
+ *--------------------------------Revision History--------------------------------------
+ *	No	version		Date			Revised By			Item			Description
+ *	1	v1.0		2016/01/06		ZhuoJianhuan						Create this file
+ *
+ ***************************************************************************************/
+/**************************************************************
+*	Debug switch Section
+**************************************************************/
 
+/**************************************************************
+*	Include File Section
+**************************************************************/
 #include "bootpack.h"
 #include <stdio.h>
+/**************************************************************
+*	Macro Define Section
+**************************************************************/
+/**************************************************************
+*	Struct Define Section
+**************************************************************/
+/**************************************************************
+*	Prototype Declare Section
+**************************************************************/
+/**************************************************************
+*	Global Variable Declare Section
+**************************************************************/
+/**************************************************************
+*	File Static Variable Define Section
+**************************************************************/
+/**************************************************************
+*	Function Define Section
+**************************************************************/
+/**
+ *	@description	初始化中断PIC设置
+ */
+void init_pic(void){
+	io_out8(PIC0_IMR,  0xff  ); //禁止PIC0所有中断
+	io_out8(PIC1_IMR,  0xff  ); //禁止PIC1所有中断
 
-void init_pic(void)
-/* PIC偺弶婜壔 */
-{
-	io_out8(PIC0_IMR,  0xff  ); /* 慡偰偺妱傝崬傒傪庴偗晅偗側偄 */
-	io_out8(PIC1_IMR,  0xff  ); /* 慡偰偺妱傝崬傒傪庴偗晅偗側偄 */
+	io_out8(PIC0_ICW1, 0x11  ); //边沿触发模式
+	io_out8(PIC0_ICW2, 0x20  ); //IRQ0-7由INT20-27接收
+	io_out8(PIC0_ICW3, 1 << 2); //PIC1由IRQ2连接
+	io_out8(PIC0_ICW4, 0x01  ); //无缓冲区模式
 
-	io_out8(PIC0_ICW1, 0x11  ); /* 僄僢僕僩儕僈儌乕僪 */
-	io_out8(PIC0_ICW2, 0x20  ); /* IRQ0-7偼丄INT20-27偱庴偗傞 */
-	io_out8(PIC0_ICW3, 1 << 2); /* PIC1偼IRQ2偵偰愙懕 */
-	io_out8(PIC0_ICW4, 0x01  ); /* 僲儞僶僢僼傽儌乕僪 */
+	io_out8(PIC1_ICW1, 0x11  ); //边沿触发模式
+	io_out8(PIC1_ICW2, 0x28  ); //IRQ8-15由INT28-2f接收
+	io_out8(PIC1_ICW3, 2     ); //PIC1由IRQ2连接
+	io_out8(PIC1_ICW4, 0x01  ); //无缓冲区模式
 
-	io_out8(PIC1_ICW1, 0x11  ); /* 僄僢僕僩儕僈儌乕僪 */
-	io_out8(PIC1_ICW2, 0x28  ); /* IRQ8-15偼丄INT28-2f偱庴偗傞 */
-	io_out8(PIC1_ICW3, 2     ); /* PIC1偼IRQ2偵偰愙懕 */
-	io_out8(PIC1_ICW4, 0x01  ); /* 僲儞僶僢僼傽儌乕僪 */
-
-	io_out8(PIC0_IMR,  0xfb  ); /* 11111011 PIC1埲奜偼慡偰嬛巭 */
-	io_out8(PIC1_IMR,  0xff  ); /* 11111111 慡偰偺妱傝崬傒傪庴偗晅偗側偄 */
+	io_out8(PIC0_IMR,  0xfb  ); //11111011 PIC1之外全部禁止
+	io_out8(PIC1_IMR,  0xff  ); //禁止PIC1所有中断
 
 	return;
 }
