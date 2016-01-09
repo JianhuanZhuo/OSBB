@@ -1,9 +1,53 @@
-/* 僂傿儞僪僂娭學 */
+/***************************************************************************************
+ *	FileName					:	window.c
+ *	CopyRight					:	1.0
+ *	ModuleName					:	window management module
+ *
+ *	Create Data					:	2016/01/06
+ *	Author/Corportation			:	ZhuoJianhuan
+ *
+ *	Abstract Description		:	window模块管理
+ *
+ *--------------------------------Revision History--------------------------------------
+ *	No	version		Date			Revised By			Item			Description
+ *	1	v1.0		2016/01/06		ZhuoJianhuan						Create this file
+ *
+ ***************************************************************************************/
+/**************************************************************
+*	Debug switch Section
+**************************************************************/
 
+/**************************************************************
+*	Include File Section
+**************************************************************/
 #include "bootpack.h"
-
-void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act)
-{
+/**************************************************************
+*	Macro Define Section
+**************************************************************/
+/**************************************************************
+*	Struct Define Section
+**************************************************************/
+/**************************************************************
+*	Prototype Declare Section
+**************************************************************/
+/**************************************************************
+*	Global Variable Declare Section
+**************************************************************/
+/**************************************************************
+*	File Static Variable Define Section
+**************************************************************/
+/**************************************************************
+*	Function Define Section
+**************************************************************/
+/**
+ *	@description	创建一个窗体
+ *	@param			buf：VRAM地址
+ *					xsize：宽度
+ *					ysize：高度
+ *					title：标题
+ *					act：是否处于激活状态
+ */
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act){
 	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         xsize - 1, 0        );
 	boxfill8(buf, xsize, COL8_FFFFFF, 1,         1,         xsize - 2, 1        );
 	boxfill8(buf, xsize, COL8_C6C6C6, 0,         0,         0,         ysize - 1);
@@ -17,8 +61,14 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char ac
 	return;
 }
 
-void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
-{
+/**
+ *	@description	渲染出一个窗口抬头
+ *	@param			buf：VRAM的起始地址
+ *					xsize：宽度
+ *					title：标题
+ *					act：是否处于激活状态
+ */
+void make_wtitle8(unsigned char *buf, int xsize, char *title, char act){
 	static char closebtn[14][16] = {
 		"OOOOOOOOOOOOOOO@",
 		"OQQQQQQQQQQQQQ$@",
@@ -64,16 +114,30 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act)
 	return;
 }
 
-void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l)
-{
+/**
+ *	@description	指定图层中渲染字符串
+ *	@param			sht：指定图层
+ *					x、y：坐标
+ *					c：颜色
+ *					b：背景色
+ *					s：字符串
+ *					l：长度
+ */
+void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l){
 	boxfill8(sht->buf, sht->bxsize, b, x, y, x + l * 8 - 1, y + 15);
 	putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s);
 	sheet_refresh(sht, x, y, x + l * 8, y + 16);
 	return;
 }
 
-void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
-{
+/**
+ *	@description	渲染一个输入框
+ *	@param			sht：指定图层
+ *					x0、y0：起始坐标
+ *					sx、sy：宽与长
+ *					c：底色？
+ */
+void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c){
 	int x1 = x0 + sx, y1 = y0 + sy;
 	boxfill8(sht->buf, sht->bxsize, COL8_848484, x0 - 2, y0 - 3, x1 + 1, y0 - 3);
 	boxfill8(sht->buf, sht->bxsize, COL8_848484, x0 - 3, y0 - 3, x0 - 3, y1 + 1);

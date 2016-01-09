@@ -1,12 +1,12 @@
 /***************************************************************************************
- *	File Name				:		mouse.h
+ *	File Name				:		file.h
  *	CopyRight				:		1.0
- *	ModuleName				:		mouse module
+ *	ModuleName				:		
  *
  *	Create Data				:		2016/01/06
  *	Author/Corportation		:		ZhuoJianhuan
  *
- *	Abstract Description	:		鼠标输入函数的声明文件
+ *	Abstract Description	:		file管理函数的声明文件
  *
  *--------------------------------Revision History--------------------------------------
  *	No	version		Data			Revised By			Item			Description
@@ -16,8 +16,8 @@
 /**************************************************************
 *	Multi-Include-Prevent Section
 **************************************************************/
-#ifndef __MOUSE_H
-#define __MOUSE_H
+#ifndef __FILE_H
+#define __FILE_H
 /**************************************************************
 *	Debug switch Section
 **************************************************************/
@@ -31,13 +31,15 @@
 /**************************************************************
 *	Struct Define Section
 **************************************************************/
-//鼠标描述符
-struct MOUSE_DEC {
-	unsigned char buf[3];	//输入的三个字节
-	unsigned char phase;	//当前状态
-	int x;					//x轴方向上的偏移量
-	int y;					//y轴方向上的偏移量
-	int btn					//按键标志
+struct FILEINFO {
+	unsigned char name[8];		//文件名
+	unsigned char ext[3];		//拓展名
+	unsigned char type;			//类型
+	char reserve[10];			//保留
+	unsigned short time;		//时间
+	unsigned short date;		//日期
+	unsigned short clustno;		//簇号
+	unsigned int size;			//大小
 };
 /**************************************************************
 *	Global Variable Declare Section
@@ -46,25 +48,30 @@ struct MOUSE_DEC {
 *	Prototype Declare Section
 **************************************************************/
 /**
- *	@description	使能鼠标模块
- *	@param			fifo：鼠标关联的缓冲区
- *					data0：鼠标关键字
- *					mdec：鼠标描述符
+ *	@description	从映像中读取FAT表
+ *	@param			fat：FAT保存目标地址
+ *					img：映像
  */
-void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
+void file_readfat(int *fat, unsigned char *img);
 
 /**
- *	@description	解码鼠标
- *	@param			mdec：鼠标描述符
- *					dat：当前的鼠标输入
- *	@return			接收到输入返回1，否则返回0，返回-1表示发生错误
+ *	@description	读取文件
+ *	@param			clustno：起始簇号
+ *					size：文件总大小
+ *					buf：文件读取后保存地址
+ *					fat：FAT表
+ *					img：磁盘映像
  */
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
+void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
 
 /**
- *	@description	鼠标中断服务函数
+ *	@description	在指定文件信息表中搜索文件
+ *	@param			name：欲搜索的文件名
+ *					finfo：文件信息表
+ *					max：查找最大条目
+ *	@return			查找失败返回0，成功返回该文件信息
  */
-void inthandler2c(int *esp);
+struct FILEINFO *file_search(char *name, struct FILEINFO *finfo, int max);
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/

@@ -1,12 +1,12 @@
 /***************************************************************************************
- *	File Name				:		mouse.h
+ *	File Name				:		window.h
  *	CopyRight				:		1.0
- *	ModuleName				:		mouse module
+ *	ModuleName				:		window module
  *
  *	Create Data				:		2016/01/06
  *	Author/Corportation		:		ZhuoJianhuan
  *
- *	Abstract Description	:		鼠标输入函数的声明文件
+ *	Abstract Description	:		window的声明文件
  *
  *--------------------------------Revision History--------------------------------------
  *	No	version		Data			Revised By			Item			Description
@@ -16,8 +16,8 @@
 /**************************************************************
 *	Multi-Include-Prevent Section
 **************************************************************/
-#ifndef __MOUSE_H
-#define __MOUSE_H
+#ifndef __WINDOW_H
+#define __WINDOW_H
 /**************************************************************
 *	Debug switch Section
 **************************************************************/
@@ -31,14 +31,6 @@
 /**************************************************************
 *	Struct Define Section
 **************************************************************/
-//鼠标描述符
-struct MOUSE_DEC {
-	unsigned char buf[3];	//输入的三个字节
-	unsigned char phase;	//当前状态
-	int x;					//x轴方向上的偏移量
-	int y;					//y轴方向上的偏移量
-	int btn					//按键标志
-};
 /**************************************************************
 *	Global Variable Declare Section
 **************************************************************/
@@ -46,25 +38,43 @@ struct MOUSE_DEC {
 *	Prototype Declare Section
 **************************************************************/
 /**
- *	@description	使能鼠标模块
- *	@param			fifo：鼠标关联的缓冲区
- *					data0：鼠标关键字
- *					mdec：鼠标描述符
+ *	@description	创建一个窗体
+ *	@param			buf：VRAM地址
+ *					xsize：宽度
+ *					ysize：高度
+ *					title：标题
+ *					act：是否处于激活状态
  */
-void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 
 /**
- *	@description	解码鼠标
- *	@param			mdec：鼠标描述符
- *					dat：当前的鼠标输入
- *	@return			接收到输入返回1，否则返回0，返回-1表示发生错误
+ *	@description	渲染出一个窗口抬头
+ *	@param			buf：VRAM的起始地址
+ *					xsize：宽度
+ *					title：标题
+ *					act：是否处于激活状态
  */
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
+void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 
 /**
- *	@description	鼠标中断服务函数
+ *	@description	指定图层中渲染字符串
+ *	@param			sht：指定图层
+ *					x、y：坐标
+ *					c：颜色
+ *					b：背景色
+ *					s：字符串
+ *					l：长度
  */
-void inthandler2c(int *esp);
+void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
+
+/**
+ *	@description	渲染一个输入框
+ *	@param			sht：指定图层
+ *					x0、y0：起始坐标
+ *					sx、sy：宽与长
+ *					c：底色？
+ */
+void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/
