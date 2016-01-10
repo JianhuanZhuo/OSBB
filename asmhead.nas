@@ -3,13 +3,13 @@
 
 [INSTRSET "i486p"]
 
-VBEMODE	EQU		0x105			; 1024 x  768 x 8bit僇儔乕
-; 乮夋柺儌乕僪堦棗乯
-;	0x100 :  640 x  400 x 8bit僇儔乕
-;	0x101 :  640 x  480 x 8bit僇儔乕
-;	0x103 :  800 x  600 x 8bit僇儔乕
-;	0x105 : 1024 x  768 x 8bit僇儔乕
-;	0x107 : 1280 x 1024 x 8bit僇儔乕
+VBEMODE	EQU		0x103			; 1024 x  768 x 8bit彩色
+; VBE画面模式设置如下
+;	0x100 :  640 x  400 x 8bit彩色
+;	0x101 :  640 x  480 x 8bit彩色
+;	0x103 :  800 x  600 x 8bit彩色
+;	0x105 : 1024 x  768 x 8bit彩色
+;	0x107 : 1280 x 1024 x 8bit彩色
 
 BOTPAK	EQU		0x00280000		; bootpack偺儘乕僪愭
 DSKCAC	EQU		0x00100000		; 僨傿僗僋僉儍僢僔儏偺応強
@@ -25,7 +25,8 @@ VRAM	EQU		0x0ff8			; 僌儔僼傿僢僋僶僢僼傽偺奐巒斣抧
 
 		ORG		0xc200			; 偙偺僾儘僌儔儉偑偳偙偵撉傒崬傑傟傞偺偐
 
-; VBE懚嵼妋擣
+; 确认VBE是否存在
+; 如果VBE存在的话，AX会变成0x004f，并跳过执行JNE scrn320
 
 		MOV		AX,0x9000
 		MOV		ES,AX
@@ -35,13 +36,15 @@ VRAM	EQU		0x0ff8			; 僌儔僼傿僢僋僶僢僼傽偺奐巒斣抧
 		CMP		AX,0x004f
 		JNE		scrn320
 
-; VBE偺僶乕僕儑儞僠僃僢僋
+; 检查VBE的版本
+; 如果VBE的版本低于2.0，则无法使用高分辨率
 
 		MOV		AX,[ES:DI+4]
 		CMP		AX,0x0200
 		JB		scrn320			; if (AX < 0x0200) goto scrn320
 
-; 夋柺儌乕僪忣曬傪摼傞
+; 取得画面的模式信息
+; 如果AX不等于0x004f则表示不可用
 
 		MOV		CX,VBEMODE
 		MOV		AX,0x4f01
@@ -49,7 +52,7 @@ VRAM	EQU		0x0ff8			; 僌儔僼傿僢僋僶僢僼傽偺奐巒斣抧
 		CMP		AX,0x004f
 		JNE		scrn320
 
-; 夋柺儌乕僪忣曬偺妋擣
+; 画面模式信息的确认
 
 		CMP		BYTE [ES:DI+0x19],8
 		JNE		scrn320
@@ -57,14 +60,14 @@ VRAM	EQU		0x0ff8			; 僌儔僼傿僢僋僶僢僼傽偺奐巒斣抧
 		JNE		scrn320
 		MOV		AX,[ES:DI+0x00]
 		AND		AX,0x0080
-		JZ		scrn320			; 儌乕僪懏惈偺bit7偑0偩偭偨偺偱偁偒傜傔傞
+		JZ		scrn320
 
-; 夋柺儌乕僪偺愗傝懼偊
+; 画面模式的切换
 
 		MOV		BX,VBEMODE+0x4000
 		MOV		AX,0x4f02
 		INT		0x10
-		MOV		BYTE [VMODE],8	; 夋柺儌乕僪傪儊儌偡傞乮C尵岅偑嶲徠偡傞乯
+		MOV		BYTE [VMODE],8	; 记下画面模式
 		MOV		AX,[ES:DI+0x12]
 		MOV		[SCRNX],AX
 		MOV		AX,[ES:DI+0x14]
@@ -73,17 +76,18 @@ VRAM	EQU		0x0ff8			; 僌儔僼傿僢僋僶僢僼傽偺奐巒斣抧
 		MOV		[VRAM],EAX
 		JMP		keystatus
 
+; 低分辨模式
 scrn320:
-		MOV		AL,0x13			; VGA僌儔僼傿僢僋僗丄320x200x8bit僇儔乕
+		MOV		AL,0x13			; VGA图、320x200x8bit彩色
 		MOV		AH,0x00
 		INT		0x10
-		MOV		BYTE [VMODE],8	; 夋柺儌乕僪傪儊儌偡傞乮C尵岅偑嶲徠偡傞乯
+		MOV		BYTE [VMODE],8	; 记下画面模式
 		MOV		WORD [SCRNX],320
 		MOV		WORD [SCRNY],200
 		MOV		DWORD [VRAM],0x000a0000
 
-; 僉乕儃乕僪偺LED忬懺傪BIOS偵嫵偊偰傕傜偆
-
+; 使用BIOS读取键盘当前的大小写锁状态，
+; 这是在未进入32位时使用BIOS的
 keystatus:
 		MOV		AH,0x02
 		INT		0x16 			; keyboard BIOS

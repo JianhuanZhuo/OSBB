@@ -1,63 +1,84 @@
-/* bootpack偺儊僀儞 */
+/***************************************************************************************
+ *	FileName					:	bootpack.c
+ *	CopyRight					:	1.0
+ *	ModuleName					:	bootpack management module
+ *
+ *	Create Data					:	2016/01/06
+ *	Author/Corportation			:	ZhuoJianhuan
+ *
+ *	Abstract Description		:	bootpack的实现文件
+ *
+ *--------------------------------Revision History--------------------------------------
+ *	No	version		Date			Revised By			Item			Description
+ *	1	v1.0		2016/01/06		ZhuoJianhuan						Create this file
+ *
+ ***************************************************************************************/
+/**************************************************************
+*	Debug switch Section
+**************************************************************/
 
+/**************************************************************
+*	Include File Section
+**************************************************************/
 #include "bootpack.h"
 #include <stdio.h>
-
+/**************************************************************
+*	Macro Define Section
+**************************************************************/
 #define KEYCMD_LED		0xed
-
-void HariMain(void)
-{
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	struct SHTCTL *shtctl;
-	char s[40];
-	struct FIFO32 fifo, keycmd;
-	int fifobuf[128], keycmd_buf[32];
-	int mx, my, i, cursor_x, cursor_c;
-	unsigned int memtotal;
-	struct MOUSE_DEC mdec;
-	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
-	unsigned char *buf_back, buf_mouse[256], *buf_win, *buf_cons;
-	struct SHEET *sht_back, *sht_mouse, *sht_win, *sht_cons;
-	struct TASK *task_a, *task_cons;
-	struct TIMER *timer;
-	static char keytable0[0x80] = {
-		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
-		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0,   0,   'A', 'S',
-		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0,   0,   ']', 'Z', 'X', 'C', 'V',
-		'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
-		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
-		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-		0,   0,   0,   0x5c, 0,  0,   0,   0,   0,   0,   0,   0,   0,   0x5c, 0,  0
-	};
-	static char keytable1[0x80] = {
-		0,   0,   '!', 0x22, '#', '$', '%', '&', 0x27, '(', ')', '~', '=', '~', 0,   0,
-		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '`', '{', 0,   0,   'A', 'S',
-		'D', 'F', 'G', 'H', 'J', 'K', 'L', '+', '*', 0,   0,   '}', 'Z', 'X', 'C', 'V',
-		'B', 'N', 'M', '<', '>', '?', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
-		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
-		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
-	};
-	int key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
-
-	init_gdtidt();
-	init_pic();
-	io_sti(); /* IDT/PIC偺弶婜壔偑廔傢偭偨偺偱CPU偺妱傝崬傒嬛巭傪夝彍 */
-	fifo32_init(&fifo, 128, fifobuf, 0);
-	init_pit();
-	init_keyboard(&fifo, 256);
-	enable_mouse(&fifo, 512, &mdec);
-	io_out8(PIC0_IMR, 0xf8); /* PIT偲PIC1偲僉乕儃乕僪傪嫋壜(11111000) */
-	io_out8(PIC1_IMR, 0xef); /* 儅僂僗傪嫋壜(11101111) */
-	fifo32_init(&keycmd, 32, keycmd_buf, 0);
-
-	memtotal = memtest(0x00400000, 0xbfffffff);
-	memman_init(memman);
-	memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
-	memman_free(memman, 0x00400000, memtotal - 0x00400000);
-
+/**************************************************************
+*	Struct Define Section
+**************************************************************/
+/**************************************************************
+*	Prototype Declare Section
+**************************************************************/
+/**************************************************************
+*	Global Variable Declare Section
+**************************************************************/
+struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
+struct SHTCTL *shtctl;
+char s[40];
+struct FIFO32 fifo, keycmd;
+int fifobuf[128], keycmd_buf[32];
+int mx, my, i, cursor_x, cursor_c;
+unsigned int memtotal;
+struct MOUSE_DEC mdec;
+struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
+unsigned char *buf_back, buf_mouse[256], *buf_win, *buf_cons;
+struct SHEET *sht_back, *sht_mouse, *sht_win, *sht_cons;
+struct TASK *task_a, *task_cons;
+struct TIMER *timer;
+int key_to = 0, key_shift = 0, key_leds = 0, keycmd_wait = -1;
+/**************************************************************
+*	File Static Variable Define Section
+**************************************************************/
+static char keytable0[0x80] = {
+	0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
+	'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0,   0,   'A', 'S',
+	'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0,   0,   ']', 'Z', 'X', 'C', 'V',
+	'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+	0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+	'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	0,   0,   0,   0x5c, 0,  0,   0,   0,   0,   0,   0,   0,   0,   0x5c, 0,  0
+};
+static char keytable1[0x80] = {
+	0,   0,   '!', 0x22, '#', '$', '%', '&', 0x27, '(', ')', '~', '=', '~', 0,   0,
+	'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '`', '{', 0,   0,   'A', 'S',
+	'D', 'F', 'G', 'H', 'J', 'K', 'L', '+', '*', 0,   0,   '}', 'Z', 'X', 'C', 'V',
+	'B', 'N', 'M', '<', '>', '?', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+	0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+	'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
+};
+/**************************************************************
+*	Function Define Section
+**************************************************************/
+/**
+ *	@description	初始化GUI界面
+ */
+void initGUI(void){
 	init_palette();
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
 	task_a = task_init(memman);
@@ -105,7 +126,7 @@ void HariMain(void)
 	sht_mouse = sheet_alloc(shtctl);
 	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
 	init_mouse_cursor8(buf_mouse, 99);
-	mx = (binfo->scrnx - 16) / 2; /* 夋柺拞墰偵側傞傛偆偵嵗昗寁嶼 */
+	mx = (binfo->scrnx - 16) / 2;
 	my = (binfo->scrny - 28 - 16) / 2;
 
 	sheet_slide(sht_back,  0,  0);
@@ -116,14 +137,47 @@ void HariMain(void)
 	sheet_updown(sht_cons,  1);
 	sheet_updown(sht_win,   2);
 	sheet_updown(sht_mouse, 3);
+}
 
-	/* 嵟弶偵僉乕儃乕僪忬懺偲偺怘偄堘偄偑側偄傛偆偵丄愝掕偟偰偍偔偙偲偵偡傞 */
+
+void initMemory(void){
+	memtotal = memtest(0x00400000, 0xbfffffff);
+	memman_init(memman);
+	memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
+	memman_free(memman, 0x00400000, memtotal - 0x00400000);
+}
+
+void initDevice(void){
+
+	init_gdtidt();
+	init_pic();
+	io_sti();
+	fifo32_init(&fifo, 128, fifobuf, 0);
+	init_pit();
+	init_keyboard(&fifo, 256);
+	enable_mouse(&fifo, 512, &mdec);
+	io_out8(PIC0_IMR, 0xf8); 
+	io_out8(PIC1_IMR, 0xef); 
+	fifo32_init(&keycmd, 32, keycmd_buf, 0);
+}
+
+/**
+ *	@description	32位模式下的c语言入口函数
+ */
+void HariMain(void){
+
+	key_leds = (binfo->leds >> 4) & 7;
+	initDevice();		//初始化设备
+	initMemory();		//初始化内存管理
+	initGUI();			//启动GUI模式
+
+	//TODO 管理鼠标键盘缓冲
 	fifo32_put(&keycmd, KEYCMD_LED);
 	fifo32_put(&keycmd, key_leds);
 
 	for (;;) {
+		//TODO 接收键盘
 		if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0) {
-			/* 僉乕儃乕僪僐儞僩儘乕儔偵憲傞僨乕僞偑偁傟偽丄憲傞 */
 			keycmd_wait = fifo32_get(&keycmd);
 			wait_KBC_sendready();
 			io_out8(PORT_KEYDAT, keycmd_wait);
@@ -135,8 +189,10 @@ void HariMain(void)
 		} else {
 			i = fifo32_get(&fifo);
 			io_sti();
-			if (256 <= i && i <= 511) { /* 僉乕儃乕僪僨乕僞 */
-				if (i < 0x80 + 256) { /* 僉乕僐乕僪傪暥帤僐乕僪偵曄姺 */
+			//TODO 键盘数据
+			if (256 <= i && i <= 511) {
+				if (i < 0x80 + 256) {
+					//TODO 切换shift模式
 					if (key_shift == 0) {
 						s[0] = keytable0[i - 256];
 					} else {
@@ -145,12 +201,16 @@ void HariMain(void)
 				} else {
 					s[0] = 0;
 				}
-				if ('A' <= s[0] && s[0] <= 'Z') {	/* 擖椡暥帤偑傾儖僼傽儀僢僩 */
-					if (((key_leds & 4) == 0 && key_shift == 0) ||
-							((key_leds & 4) != 0 && key_shift != 0)) {
-						s[0] += 0x20;	/* 戝暥帤傪彫暥帤偵曄姺 */
+
+				//TODO 检查是否是需要转换大小写的字符
+				if ('A' <= s[0] && s[0] <= 'Z') {
+					if (((key_leds & 4) == 0 && key_shift == 0) || ((key_leds & 4) != 0 && key_shift != 0)) {
+						//TODO 转换大小写模式
+						s[0] += 0x20;
 					}
 				}
+
+
 				if (s[0] != 0) { /* 捠忢暥帤 */
 					if (key_to == 0) {	/* 僞僗僋A傊 */
 						if (cursor_x < 128) {
@@ -163,50 +223,64 @@ void HariMain(void)
 						fifo32_put(&task_cons->fifo, s[0] + 256);
 					}
 				}
-				if (i == 256 + 0x0e) {	/* 僶僢僋僗儁乕僗 */
-					if (key_to == 0) {	/* 僞僗僋A傊 */
+
+				//TODO 检查是否为退格键
+				if (i == 256 + 0x0e) {
+					//TODO 是否应该发送给任务A
+					if (key_to == 0) {
 						if (cursor_x > 8) {
-							/* 僇乕僜儖傪僗儁乕僗偱徚偟偰偐傜丄僇乕僜儖傪1偮栠偡 */
+							//TODO 用空白擦除光标后，将光标向后移动一位
 							putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, " ", 1);
 							cursor_x -= 8;
 						}
-					} else {	/* 僐儞僜乕儖傊 */
+					} else {
+						//发送到命令行窗口
 						fifo32_put(&task_cons->fifo, 8 + 256);
 					}
 				}
+
+				//TODO 检查是否为Enter键
 				if (i == 256 + 0x1c) {	/* Enter */
 					if (key_to != 0) {	/* 僐儞僜乕儖傊 */
 						fifo32_put(&task_cons->fifo, 10 + 256);
 					}
 				}
-				if (i == 256 + 0x0f) {	/* Tab */
+
+				//TODO 检查是否为TAB键
+				if (i == 256 + 0x0f) {
+					//TODO 切换窗口焦点
 					if (key_to == 0) {
 						key_to = 1;
 						make_wtitle8(buf_win,  sht_win->bxsize,  "task_a",  0);
 						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
-						cursor_c = -1; /* 僇乕僜儖傪徚偡 */
+						//TODO 隐藏光标
+						cursor_c = -1;
 						boxfill8(sht_win->buf, sht_win->bxsize, COL8_FFFFFF, cursor_x, 28, cursor_x + 7, 43);
-						fifo32_put(&task_cons->fifo, 2); /* 僐儞僜乕儖偺僇乕僜儖ON */
+						//TODO 通知命令窗口打开光标
+						fifo32_put(&task_cons->fifo, 2);
 					} else {
 						key_to = 0;
 						make_wtitle8(buf_win,  sht_win->bxsize,  "task_a",  1);
 						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
-						cursor_c = COL8_000000; /* 僇乕僜儖傪弌偡 */
-						fifo32_put(&task_cons->fifo, 3); /* 僐儞僜乕儖偺僇乕僜儖OFF */
+						//TODO 显示光标
+						cursor_c = COL8_000000;
+						//TODO 通知命令窗口关闭光标
+						fifo32_put(&task_cons->fifo, 3);
 					}
 					sheet_refresh(sht_win,  0, 0, sht_win->bxsize,  21);
 					sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
-				}
-				if (i == 256 + 0x2a) {	/* 嵍僔僼僩 ON */
+				}//end of TAB键处理
+
+				if (i == 256 + 0x2a) {	/* 左shift ON */
 					key_shift |= 1;
 				}
-				if (i == 256 + 0x36) {	/* 塃僔僼僩 ON */
+				if (i == 256 + 0x36) {	/* 右shift ON */
 					key_shift |= 2;
 				}
-				if (i == 256 + 0xaa) {	/* 嵍僔僼僩 OFF */
+				if (i == 256 + 0xaa) {	/* 左shift OFF */
 					key_shift &= ~1;
 				}
-				if (i == 256 + 0xb6) {	/* 塃僔僼僩 OFF */
+				if (i == 256 + 0xb6) {	/* 右shift OFF */
 					key_shift &= ~2;
 				}
 				if (i == 256 + 0x3a) {	/* CapsLock */
@@ -224,21 +298,25 @@ void HariMain(void)
 					fifo32_put(&keycmd, KEYCMD_LED);
 					fifo32_put(&keycmd, key_leds);
 				}
-				if (i == 256 + 0xfa) {	/* 僉乕儃乕僪偑僨乕僞傪柍帠偵庴偗庢偭偨 */
+				if (i == 256 + 0xfa) {
 					keycmd_wait = -1;
 				}
-				if (i == 256 + 0xfe) {	/* 僉乕儃乕僪偑僨乕僞傪柍帠偵庴偗庢傟側偐偭偨 */
+				if (i == 256 + 0xfe) {
 					wait_KBC_sendready();
 					io_out8(PORT_KEYDAT, keycmd_wait);
 				}
-				/* 僇乕僜儖偺嵞昞帵 */
+				
+				//TODO 渲染出光标
 				if (cursor_c >= 0) {
 					boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
 				}
 				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
-			} else if (512 <= i && i <= 767) { /* 儅僂僗僨乕僞 */
+			}//end of 键盘输入 
+
+			//TODO 检查是否为鼠标数据输入
+			else if (512 <= i && i <= 767) {
 				if (mouse_decode(&mdec, i - 512) != 0) {
-					/* 儅僂僗僇乕僜儖偺堏摦 */
+					//TODO 当前鼠标再加上偏移量
 					mx += mdec.x;
 					my += mdec.y;
 					if (mx < 0) {
@@ -255,18 +333,20 @@ void HariMain(void)
 					}
 					sheet_slide(sht_mouse, mx, my);
 					if ((mdec.btn & 0x01) != 0) {
-						/* 嵍儃僞儞傪墴偟偰偄偨傜丄sht_win傪摦偐偡 */
 						sheet_slide(sht_win, mx - 80, my - 8);
 					}
 				}
-			} else if (i <= 1) { /* 僇乕僜儖梡僞僀儅 */
+			}//end of 鼠标输入
+
+			//TODO 光标定时器
+			else if (i <= 1) {
 				if (i != 0) {
-					timer_init(timer, &fifo, 0); /* 師偼0傪 */
+					timer_init(timer, &fifo, 0);
 					if (cursor_c >= 0) {
 						cursor_c = COL8_000000;
 					}
 				} else {
-					timer_init(timer, &fifo, 1); /* 師偼1傪 */
+					timer_init(timer, &fifo, 1);
 					if (cursor_c >= 0) {
 						cursor_c = COL8_FFFFFF;
 					}
@@ -276,7 +356,7 @@ void HariMain(void)
 					boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
 					sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 				}
-			}
+			}//end of 光标定时器输入
 		}
 	}
 }

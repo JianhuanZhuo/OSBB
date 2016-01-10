@@ -37,7 +37,7 @@ struct MOUSE_DEC {
 	unsigned char phase;	//当前状态
 	int x;					//x轴方向上的偏移量
 	int y;					//y轴方向上的偏移量
-	int btn					//按键标志
+	int btn;					//按键标志
 };
 /**************************************************************
 *	Global Variable Declare Section

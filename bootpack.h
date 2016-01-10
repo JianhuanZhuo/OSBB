@@ -6,7 +6,7 @@
  *	Create Data				:		2016/01/06
  *	Author/Corportation		:		ZhuoJianhuan
  *
- *	Abstract Description	:		
+ *	Abstract Description	:		启动盘主程序
  *
  *--------------------------------Revision History--------------------------------------
  *	No	version		Data			Revised By			Item			Description
@@ -39,6 +39,7 @@
 #include "mouse.h"
 #include "window.h"
 #include "file.h"
+#include "console.h"
 /**************************************************************
 *	Macro Define Section
 **************************************************************/
@@ -51,27 +52,6 @@
 /**************************************************************
 *	Prototype Declare Section
 **************************************************************/
-
-/* console.c */
-struct CONSOLE {
-	struct SHEET *sht;
-	int cur_x, cur_y, cur_c;
-};
-void console_task(struct SHEET *sheet, unsigned int memtotal);
-void cons_putchar(struct CONSOLE *cons, int chr, char move);
-void cons_newline(struct CONSOLE *cons);
-void cons_putstr0(struct CONSOLE *cons, char *s);
-void cons_putstr1(struct CONSOLE *cons, char *s, int l);
-void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal);
-void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
-void cmd_cls(struct CONSOLE *cons);
-void cmd_dir(struct CONSOLE *cons);
-void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline);
-int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
-void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
-
-
-
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/
