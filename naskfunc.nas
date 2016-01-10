@@ -1,10 +1,16 @@
 ; naskfunc
 ; TAB=4
 
-[FORMAT "WCOFF"]				; 僆僽僕僃僋僩僼傽僀儖傪嶌傞儌乕僪	
-[INSTRSET "i486p"]				; 486偺柦椷傑偱巊偄偨偄偲偄偆婰弎
-[BITS 32]						; 32價僢僩儌乕僪梡偺婡夿岅傪嶌傜偣傞
-[FILE "naskfunc.nas"]			; 僜乕僗僼傽僀儖柤忣曬
+[FORMAT "WCOFF"]				; 格式	
+[INSTRSET "i486p"]				; 486支持
+[BITS 32]						; 32位指令模式
+[FILE "naskfunc.nas"]			; 文件名
+
+;
+;	创建一个汇编函数的方法
+;	声明入口标签为GLOBAL
+;	标签名比函数多加一个下划线作为前缀
+;
 
 		GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
 		GLOBAL	_io_in8,  _io_in16,  _io_in32
@@ -114,6 +120,8 @@ _load_tr:		; void load_tr(int tr);
 		LTR		[ESP+4]			; tr
 		RET
 
+
+; 20中断函数转移代码片
 _asm_inthandler20:
 		PUSH	ES
 		PUSH	DS
@@ -130,6 +138,7 @@ _asm_inthandler20:
 		POP		ES
 		IRETD
 
+; 21中断函数转移代码片
 _asm_inthandler21:
 		PUSH	ES
 		PUSH	DS
@@ -146,6 +155,7 @@ _asm_inthandler21:
 		POP		ES
 		IRETD
 
+; 27中断函数转移代码片
 _asm_inthandler27:
 		PUSH	ES
 		PUSH	DS
@@ -162,6 +172,7 @@ _asm_inthandler27:
 		POP		ES
 		IRETD
 
+; 2c中断函数转移代码片
 _asm_inthandler2c:
 		PUSH	ES
 		PUSH	DS
@@ -178,6 +189,8 @@ _asm_inthandler2c:
 		POP		ES
 		IRETD
 
+; 内存检查函数
+; 该处使用汇编，是为了避免C编译器的优化
 _memtest_sub:	; unsigned int memtest_sub(unsigned int start, unsigned int end)
 		PUSH	EDI						; 乮EBX, ESI, EDI 傕巊偄偨偄偺偱乯
 		PUSH	ESI
@@ -211,20 +224,23 @@ mts_fin:
 		POP		EDI
 		RET
 
+; 不同段间的转移
 _farjmp:		; void farjmp(int eip, int cs);
 		JMP		FAR	[ESP+4]				; eip, cs
 		RET
 
+; 不同段间的调用
 _farcall:		; void farcall(int eip, int cs);
 		CALL	FAR	[ESP+4]				; eip, cs
 		RET
 
+; 系统调用软中断转移代码片
 _asm_hrb_api:
 		STI
-		PUSHAD	; 曐懚偺偨傔偺PUSH
-		PUSHAD	; hrb_api偵搉偡偨傔偺PUSH
-		CALL	_hrb_api
-		ADD		ESP,32
+		PUSHAD					; 保存状态
+		PUSHAD					; 将当前寄存器的状态作为_hrb_api函数的参数
+		CALL	_hrb_api		; 调用函数
+		ADD		ESP,32			; 清空栈
 		POPAD
 		IRETD
 

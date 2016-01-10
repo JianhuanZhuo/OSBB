@@ -1,7 +1,17 @@
 ; haribote-os boot asm
 ; TAB=4
+; 内存分布大概
+; 0x0000 0000 ~ 0x000f ffff BIOS、VRAM等		1		MB
+; 0x0010 0000 ~ 0x0026 7fff 用于保存盘的内容	1440	KB
+; 0x0026 8000 ~ 0x0026 f7ff 空					30		KB
+; 0x0026 f800 ~ 0x0026 ffff IDT					2		KB
+; 0x0027 0000 ~ 0x0027 ffff GDT					64		KB
+; 0x0028 0000 ~ 0x002f ffff bootpack.hrb		512		KB
+; 0x0030 0000 ~ 0x003f ffff 栈及其他			1		MB
+; 0x0040 0000 ~
+; 
+[INSTRSET "i486p"]				; 486指令使用许可
 
-[INSTRSET "i486p"]
 
 VBEMODE	EQU		0x103			; 1024 x  768 x 8bit彩色
 ; VBE画面模式设置如下
@@ -11,19 +21,25 @@ VBEMODE	EQU		0x103			; 1024 x  768 x 8bit彩色
 ;	0x105 : 1024 x  768 x 8bit彩色
 ;	0x107 : 1280 x 1024 x 8bit彩色
 
+
 BOTPAK	EQU		0x00280000		; bootpack偺儘乕僪愭
 DSKCAC	EQU		0x00100000		; 僨傿僗僋僉儍僢僔儏偺応強
 DSKCAC0	EQU		0x00008000		; 僨傿僗僋僉儍僢僔儏偺応強乮儕傾儖儌乕僪乯
 
 ; BOOT_INFO娭學
 CYLS	EQU		0x0ff0			; 僽乕僩僙僋僞偑愝掕偡傞
-LEDS	EQU		0x0ff1
+LEDS	EQU		0x0ff1			; 
 VMODE	EQU		0x0ff2			; 怓悢偵娭偡傞忣曬丅壗價僢僩僇儔乕偐丠
 SCRNX	EQU		0x0ff4			; 夝憸搙偺X
 SCRNY	EQU		0x0ff6			; 夝憸搙偺Y
 VRAM	EQU		0x0ff8			; 僌儔僼傿僢僋僶僢僼傽偺奐巒斣抧
 
-		ORG		0xc200			; 偙偺僾儘僌儔儉偑偳偙偵撉傒崬傑傟傞偺偐
+
+; 执行haribote.sys文件，该文件保存于img映像中的第一个文件
+; 则是FAT12系统中的0x4200起才开始存储文件的
+; 而这段img映像是被加载到0x8000的，
+; 所谓haribote.sys应该是在内存中的0xc200位置
+		ORG		0xc200			; 该处为磁盘映像的位置
 
 ; 确认VBE是否存在
 ; 如果VBE存在的话，AX会变成0x004f，并跳过执行JNE scrn320
@@ -93,19 +109,19 @@ keystatus:
 		INT		0x16 			; keyboard BIOS
 		MOV		[LEDS],AL
 
-; PIC偑堦愗偺妱傝崬傒傪庴偗晅偗側偄傛偆偵偡傞
-;	AT屳姺婡偺巇條偱偼丄PIC偺弶婜壔傪偡傞側傜丄
-;	偙偄偮傪CLI慜偵傗偭偰偍偐側偄偲丄偨傑偵僴儞僌傾僢僾偡傞
-;	PIC偺弶婜壔偼偁偲偱傗傞
+; PIC关闭一切中断
+;	根据AT兼容机的规格，如果要初始化PIC
+;	必须在CLI之前进行，否则会挂起
+;	随后进行PIC的初始化
 
 		MOV		AL,0xff
-		OUT		0x21,AL
-		NOP						; OUT柦椷傪楢懕偝偣傞偲偆傑偔偄偐側偄婡庬偑偁傞傜偟偄偺偱
-		OUT		0xa1,AL
+		OUT		0x21,AL			; 禁止PIC0的主中断
+		NOP						; 连续进行OUT操作，可能会出现异常
+		OUT		0xa1,AL			; 禁止PIC1的主中断
 
-		CLI						; 偝傜偵CPU儗儀儖偱傕妱傝崬傒嬛巭
+		CLI						; 禁止CPU级别的中断
 
-; CPU偐傜1MB埲忋偺儊儌儕偵傾僋僙僗偱偒傞傛偆偵丄A20GATE傪愝掕
+; 为了让CPU能访问1MB以上的内存空间，设定A20GATE
 
 		CALL	waitkbdout
 		MOV		AL,0xd1
@@ -115,87 +131,84 @@ keystatus:
 		OUT		0x60,AL
 		CALL	waitkbdout
 
-; 僾儘僥僋僩儌乕僪堏峴
+; 切换到保护模式
 
-		LGDT	[GDTR0]			; 巄掕GDT傪愝掕
+		LGDT	[GDTR0]			; 设立临时GDT
 		MOV		EAX,CR0
-		AND		EAX,0x7fffffff	; bit31傪0偵偡傞乮儁乕僕儞僌嬛巭偺偨傔乯
-		OR		EAX,0x00000001	; bit0傪1偵偡傞乮僾儘僥僋僩儌乕僪堏峴偺偨傔乯
+		AND		EAX,0x7fffffff	; 设bit31为0（为了禁止颁）
+		OR		EAX,0x00000001	; 设bit0 为1（为了切换到保护模式）
 		MOV		CR0,EAX
-		JMP		pipelineflush
+		JMP		pipelineflush	; 管道机制
 pipelineflush:
-		MOV		AX,1*8			;  撉傒彂偒壜擻僙僌儊儞僩32bit
+		MOV		AX,1*8			;  可读的段 32bit
 		MOV		DS,AX
 		MOV		ES,AX
 		MOV		FS,AX
 		MOV		GS,AX
 		MOV		SS,AX
 
-; bootpack偺揮憲
+; bootpack的转送
+		MOV		ESI,bootpack	; 转送源
+		MOV		EDI,BOTPAK		; 转送目的地
+		MOV		ECX,512*1024/4	; 转送长度
+		CALL	memcpy			; 上面的寄存器设置是作为参数
 
-		MOV		ESI,bootpack	; 揮憲尦
-		MOV		EDI,BOTPAK		; 揮憲愭
-		MOV		ECX,512*1024/4
-		CALL	memcpy
+; 磁盘数据最终传送到它本身的位置上
 
-; 偮偄偱偵僨傿僗僋僨乕僞傕杮棃偺埵抲傊揮憲
+; 首先从启动区开始
+		MOV		ESI,0x7c00		; 传送源
+		MOV		EDI,DSKCAC		; 传送目的地
+		MOV		ECX,512/4		; 传送长度
+		CALL	memcpy			; 启动传送
 
-; 傑偢偼僽乕僩僙僋僞偐傜
+; 所有剩下的
 
-		MOV		ESI,0x7c00		; 揮憲尦
-		MOV		EDI,DSKCAC		; 揮憲愭
-		MOV		ECX,512/4
-		CALL	memcpy
-
-; 巆傝慡晹
-
-		MOV		ESI,DSKCAC0+512	; 揮憲尦
-		MOV		EDI,DSKCAC+512	; 揮憲愭
+		MOV		ESI,DSKCAC0+512	; 传送源
+		MOV		EDI,DSKCAC+512	; 传送目的地
 		MOV		ECX,0
 		MOV		CL,BYTE [CYLS]
-		IMUL	ECX,512*18*2/4	; 僔儕儞僟悢偐傜僶僀僩悢/4偵曄姺
-		SUB		ECX,512/4		; IPL偺暘偩偗嵎偟堷偔
+		IMUL	ECX,512*18*2/4	; 从柱面数变换为字节数/4
+		SUB		ECX,512/4		; 减去IPL
 		CALL	memcpy
 
-; asmhead偱偟側偗傟偽偄偗側偄偙偲偼慡晹偟廔傢偭偨偺偱丄
-;	偁偲偼bootpack偵擟偣傞
 
-; bootpack偺婲摦
+; bootpack的启动
 
 		MOV		EBX,BOTPAK
 		MOV		ECX,[EBX+16]
 		ADD		ECX,3			; ECX += 3;
 		SHR		ECX,2			; ECX /= 4;
-		JZ		skip			; 揮憲偡傞傋偒傕偺偑側偄
-		MOV		ESI,[EBX+20]	; 揮憲尦
+		JZ		skip			; 
+		MOV		ESI,[EBX+20]	; 
 		ADD		ESI,EBX
-		MOV		EDI,[EBX+12]	; 揮憲愭
+		MOV		EDI,[EBX+12]	; 
 		CALL	memcpy
 skip:
-		MOV		ESP,[EBX+12]	; 僗僞僢僋弶婜抣
-		JMP		DWORD 2*8:0x0000001b
+		MOV		ESP,[EBX+12]	; 栈的初始值
+		JMP		DWORD 2*8:0x0000001b	; 带段号的，这里的二号就是注程序的
 
 waitkbdout:
 		IN		 AL,0x64
 		AND		 AL,0x02
-		JNZ		waitkbdout		; AND偺寢壥偑0偱側偗傟偽waitkbdout傊
+		JNZ		waitkbdout		; 
 		RET
 
+
+; 内存拷贝命令
 memcpy:
 		MOV		EAX,[ESI]
 		ADD		ESI,4
 		MOV		[EDI],EAX
 		ADD		EDI,4
 		SUB		ECX,1
-		JNZ		memcpy			; 堷偒嶼偟偨寢壥偑0偱側偗傟偽memcpy傊
+		JNZ		memcpy			; 减法结果不是0，则循环拷贝
 		RET
-; memcpy偼傾僪儗僗僒僀僘僾儕僼傿僋僗傪擖傟朰傟側偗傟偽丄僗僩儕儞僌柦椷偱傕彂偗傞
 
 		ALIGNB	16
 GDT0:
-		RESB	8				; 僰儖僙儗僋僞
-		DW		0xffff,0x0000,0x9200,0x00cf	; 撉傒彂偒壜擻僙僌儊儞僩32bit
-		DW		0xffff,0x0000,0x9a28,0x0047	; 幚峴壜擻僙僌儊儞僩32bit乮bootpack梡乯
+		RESB	8				; NULL selector
+		DW		0xffff,0x0000,0x9200,0x00cf	; 可读写的段(segment)32bit
+		DW		0xffff,0x0000,0x9a28,0x0047	; 可读写的段(segment)32bit(bootpack)
 
 		DW		0
 GDTR0:
