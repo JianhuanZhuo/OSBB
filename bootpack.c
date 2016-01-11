@@ -72,6 +72,9 @@ static char keytable1[0x80] = {
 	0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 	0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
 };
+
+
+//添加的
 /**************************************************************
 *	Function Define Section
 **************************************************************/
@@ -316,7 +319,11 @@ void HariMain(void){
 			//TODO 检查是否为鼠标数据输入
 			else if (512 <= i && i <= 767) {
 				if (mouse_decode(&mdec, i - 512) != 0) {
-					//TODO 当前鼠标再加上偏移量
+					char str[32];
+					int oldx = mx-1;
+					int oldy = my-1;
+					int targetSht = shtctl->map[binfo->scrnx*oldy+oldx];
+					//TODO 鼠标动作
 					mx += mdec.x;
 					my += mdec.y;
 					if (mx < 0) {
@@ -332,8 +339,21 @@ void HariMain(void){
 						my = binfo->scrny - 1;
 					}
 					sheet_slide(sht_mouse, mx, my);
+					
+					//TODO 拖动？
+					if((mdec.btn & 0x01) && (mdec.oldbtn & 0x01)){
+						//mx,my是鼠标的坐标
+						//sprintf(str, "%d", sizeof(struct FILEINFO));
+						//boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 250, 30, 350, 90);
+						//putfonts8_asc(binfo->vram, binfo->scrnx, 300, 60, COL8_FFFFFF, str);
+						if(targetSht !=0 && targetSht != 3){
+							sheet_slide(shtctl->sheets[targetSht], mx - 80, my - 8);
+						}
+					}
+
+					//TODO 检查是否点击
 					if ((mdec.btn & 0x01) != 0) {
-						sheet_slide(sht_win, mx - 80, my - 8);
+						//sheet_slide(sht_win, mx - 80, my - 8);
 					}
 				}
 			}//end of 鼠标输入

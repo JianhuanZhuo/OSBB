@@ -13,7 +13,7 @@
 [INSTRSET "i486p"]				; 486指令使用许可
 
 
-VBEMODE	EQU		0x103			; 1024 x  768 x 8bit彩色
+VBEMODE	EQU		0x100			; 1024 x  768 x 8bit彩色
 ; VBE画面模式设置如下
 ;	0x100 :  640 x  400 x 8bit彩色
 ;	0x101 :  640 x  480 x 8bit彩色

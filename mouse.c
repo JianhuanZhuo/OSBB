@@ -61,6 +61,7 @@ void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec){
 	
 	//TODO ｳｼｻｯﾊ�ｽﾓﾊﾕﾗｴﾌｬ
 	mdec->phase = 0;
+	mdec->oldbtn = 0;
 	return;
 }
 
@@ -97,6 +98,7 @@ int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat){
 		/* マウスの3バイト目を待っている段階 */
 		mdec->buf[2] = dat;
 		mdec->phase = 1;
+		mdec->oldbtn = mdec->btn;
 		mdec->btn = mdec->buf[0] & 0x07;
 		mdec->x = mdec->buf[1];
 		mdec->y = mdec->buf[2];

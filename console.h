@@ -83,6 +83,14 @@ void cons_putstr1(struct CONSOLE *cons, char *s, int l);
  */
 void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal);
 
+
+/**
+ *	@description	创建一个文件
+ *	@param			cons：控制台
+ *					cmdline；命令行
+ */
+void cmd_touch(struct CONSOLE *cons, char *cmdline);
+
 /**
  *	@description	查看内存的命令
  *	@param			cons：控制台
@@ -94,13 +102,21 @@ void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
  *	@description	执行清屏命令
  *	@param			cons：指定的控制台
  */
-void cmd_cls(struct CONSOLE *cons);
+void cmd_clean(struct CONSOLE *cons);
 
 /**
  *	@description	执行查看文件命令
  *	@param			cons：指定控制台
  */
-void cmd_dir(struct CONSOLE *cons);
+void cmd_ls(struct CONSOLE *cons);
+
+/**
+ *	@description	切换路径
+ *	@param			cons：制定控制台
+ *					cmdline：命令行，用于解析出参数的
+ *	@notice			此处的函数需要修改以支持相对路径
+ */
+void cmd_cd(struct CONSOLE *cons, char *cmdline);
 
 /**
  *	@description	输出文件内容
@@ -108,7 +124,7 @@ void cmd_dir(struct CONSOLE *cons);
  *					fat：FAT表
  *					cmdline：命令行，用于解析出参数的
  */
-void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline);
+void cmd_cat(struct CONSOLE *cons, char *cmdline);
 
 /**
  *	@description	指定应用程序
@@ -125,6 +141,12 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
  *					edx：一般指定该寄存器为功能号
  */
 void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
+
+/**
+ *	@description	执行创建目录文件命令
+ *	@param			cons：指定控制台
+ */
+void cmd_mkdir(struct CONSOLE *cons);
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/

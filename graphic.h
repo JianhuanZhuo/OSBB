@@ -50,6 +50,8 @@
 /**************************************************************
 *	Global Variable Declare Section
 **************************************************************/
+extern char *debugStr[300];
+extern int debugLine;
 /**************************************************************
 *	Prototype Declare Section
 **************************************************************/
@@ -122,6 +124,11 @@ void init_mouse_cursor8(char *mouse, char bc);
  *					bxsize：buf的宽度
  */
 void putblock8_8(char *vram, int vxsize, int pxsize,int pysize, int px0, int py0, char *buf, int bxsize);
+
+/**
+ *	@description	DEBUG指定行输出调试信息
+ */
+void debug(int line, char *str);
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/

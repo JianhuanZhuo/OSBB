@@ -33,6 +33,9 @@
 /**************************************************************
 *	Global Variable Declare Section
 **************************************************************/
+extern struct BOOTINFO *binfo;
+char *debugStr[300];
+int debugLine;
 /**************************************************************
 *	File Static Variable Define Section
 **************************************************************/
@@ -232,4 +235,14 @@ void putblock8_8(char *vram, int vxsize, int pxsize,int pysize, int px0, int py0
 		}
 	}
 	return;
+}
+
+
+/**
+ *	@description	DEBUG指定行输出调试信息
+ */
+void debug(int line, char *str){
+	line+=2;
+	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, binfo->scrny-line*16, binfo->scrnx, binfo->scrny-line*16);
+	putfonts8_asc(binfo->vram, binfo->scrnx, 0, binfo->scrny-line*16, COL8_FFFFFF, str);
 }

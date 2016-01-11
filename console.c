@@ -23,10 +23,13 @@
 #include "bootpack.h"
 #include <stdio.h>
 #include <string.h>
+#include "stack.h"
 /**************************************************************
 *	Macro Define Section
 **************************************************************/
-/**************************************************************
+#define consContW	240
+#define consContH	128
+/*************************************************************
 *	Struct Define Section
 **************************************************************/
 /**************************************************************
@@ -36,6 +39,7 @@
 /**************************************************************
 *	Global Variable Declare Section
 **************************************************************/
+struct pathEnv pEnv;
 /**************************************************************
 *	File Static Variable Define Section
 **************************************************************/
@@ -54,6 +58,8 @@ void console_task(struct SHEET *sheet, unsigned int memtotal){
 	int i, fifobuf[128], *fat = (int *) memman_alloc_4k(memman, 4 * 2880);
 	struct CONSOLE cons;	//控制台结构体
 	char cmdline[30];		//命令
+	int cmdLineNum = 0;		//命令符数
+	char pathLine[30];		
 	cons.sht = sheet;		//画板
 	cons.cur_x =  8;		//光标X坐标
 	cons.cur_y = 28;		//光标Y坐标
@@ -67,7 +73,14 @@ void console_task(struct SHEET *sheet, unsigned int memtotal){
 	timer_settime(timer, 50);
 	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));
 
+	//TODO 设置FS
+	setupFS(fat, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), (char *) (ADR_DISKIMG + 0x003e00));
+	//TODO 路径栈
+	initPathEnv(&pEnv);
+
 	//TODO 命令提示符
+	getPathCurrent(&pEnv, &pathLine);
+	cons_putstr0(&cons, pathLine);
 	cons_putchar(&cons, '>', 1);
 
 	for (;;) {
@@ -112,25 +125,29 @@ void console_task(struct SHEET *sheet, unsigned int memtotal){
 			if (256 <= i && i <= 511) {
 				if (i == 8 + 256) {
 					//TODO 退格键，则擦除一位
-					if (cons.cur_x > 16) {
+					if (cmdLineNum > 0) {
 						cons_putchar(&cons, ' ', 0);
 						cons.cur_x -= 8;
+						cmdLineNum--;
 					}
 				} else if (i == 10 + 256) {
 					//TODO 回车键
 					//空格擦除后换行
 					cons_putchar(&cons, ' ', 0);
-					cmdline[cons.cur_x / 8 - 2] = 0;
+					cmdline[cmdLineNum++] = 0;
 					cons_newline(&cons);
 					//TODO 运行命令
 					cons_runcmd(cmdline, &cons, fat, memtotal);
+					cmdLineNum = 0;
 					//显示提示符
+					getPathCurrent(&pEnv, &pathLine);
+					cons_putstr0(&cons, pathLine);
 					cons_putchar(&cons, '>', 1);
 				} else {
 					//一般字符
-					if (cons.cur_x < 240) {
+					if (cons.cur_x < consContW) {
 						//TODO 
-						cmdline[cons.cur_x / 8 - 2] = i - 256;
+						cmdline[cmdLineNum++] = i - 256;
 						//TODO 显示字符
 						cons_putchar(&cons, i - 256, 1);
 					}
@@ -162,7 +179,7 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move){
 		for (;;) {
 			putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, " ", 1);
 			cons->cur_x += 8;
-			if (cons->cur_x == 8 + 240) {
+			if (cons->cur_x == 8 + consContW) {
 				cons_newline(cons);
 			}
 			if (((cons->cur_x - 8) & 0x1f) == 0) {
@@ -180,7 +197,7 @@ void cons_putchar(struct CONSOLE *cons, int chr, char move){
 		putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 1);
 		if (move != 0) {
 			cons->cur_x += 8;
-			if (cons->cur_x == 8 + 240) {
+			if (cons->cur_x == 8 + consContW) {
 				cons_newline(cons);
 			}
 		}
@@ -201,18 +218,18 @@ void cons_newline(struct CONSOLE *cons){
 	} else {
 		//TODO 滚动控制台显示
 		for (y = 28; y < 28 + 112; y++) {
-			for (x = 8; x < 8 + 240; x++) {
+			for (x = 8; x < 8 + consContW; x++) {
 				sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
 			}
 		}
 
 		//TODO 最后一行刷新
-		for (y = 28 + 112; y < 28 + 128; y++) {
-			for (x = 8; x < 8 + 240; x++) {
+		for (y = 28 + 112; y < 28 + consContH; y++) {
+			for (x = 8; x < 8 + consContW; x++) {
 				sheet->buf[x + y * sheet->bxsize] = COL8_000000;
 			}
 		}
-		sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+		sheet_refresh(sheet, 8, 28, 8 + consContW, 28 + consContH);
 	}
 	cons->cur_x = 8;
 	return;
@@ -252,14 +269,23 @@ void cons_putstr1(struct CONSOLE *cons, char *s, int l){
  *					memtotal：内存总量
  */
 void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal){
+	
 	if (strcmp(cmdline, "mem") == 0) {
 		cmd_mem(cons, memtotal);
-	} else if (strcmp(cmdline, "cls") == 0) {
-		cmd_cls(cons);
-	} else if (strcmp(cmdline, "dir") == 0) {
-		cmd_dir(cons);
-	} else if (strncmp(cmdline, "type ", 5) == 0) {
-		cmd_type(cons, fat, cmdline);
+	} else if (strcmp(cmdline, "clean") == 0) {
+		cmd_clean(cons);
+	} else if (strcmp(cmdline, "ls") == 0) {
+		cmd_ls(cons);
+	} else if (strcmp(cmdline, "mkdir") == 0) {
+		cmd_mkdir(cons);
+	} else if (strncmp(cmdline, "cat ", 4) == 0) {
+		cmd_cat(cons, cmdline);
+	} else if (strncmp(cmdline, "cd ", 3) == 0) {
+		cmd_cd(cons, cmdline);
+	} else if (strncmp(cmdline, "rm ", 3) == 0) {
+		cmd_rm(cons, cmdline+3);
+	} else if (strncmp(cmdline, "touch ", 6) == 0) {
+		cmd_touch(cons, cmdline+6);
 	} else if (cmdline[0] != 0) {
 		if (cmd_app(cons, fat, cmdline) == 0) {
 			//不是命令也不是应用程序
@@ -267,6 +293,85 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 		}
 	}
 	return;
+}
+
+
+/**
+ *	@description	删除一个文件
+ *	@param			cons：控制台
+ *					cmdline；命令行
+ */
+void cmd_rm(struct CONSOLE *cons, char *cmdline){
+	
+	struct FILEINFO* dirCur;
+	dirCur = getDirCurrent(&pEnv);
+	int i;
+	char fileName[12];
+	for(i=0; i<11&&cmdline[i]!=0x00; i++){
+		fileName[i]=cmdline[i];
+	}
+	fileName[i] = 0x00;
+
+	deleteByName(fileName, dirCur);
+}
+
+
+/**
+ *	@description	创建一个文件
+ *	@param			cons：控制台
+ *					cmdline；命令行
+ */
+void cmd_touch(struct CONSOLE *cons, char *cmdline){
+	
+	struct FILEINFO* dirCur;
+	dirCur = getDirCurrent(&pEnv);
+	int i;
+	char fileName[9];
+	char ext[4];
+	for(i=0; i<8&&cmdline[i]!='.'&&cmdline[i]!=0x00; i++){
+		fileName[i]=cmdline[i];
+	}
+	fileName[i] = 0x00;
+	
+	if(cmdline[i]=='.'){
+		for(cmdline+=(i+1), i=0; i<3&&cmdline[i]!=0x00; i++){
+			ext[i]=cmdline[i];
+		}
+	}
+	ext[i]=0x00;
+
+	if(createFile(fileName, ext, dirCur, 0)){
+		cons_putstr0(cons, "File has exist!\n\n");
+	}
+}
+
+/**
+ *	@description	切换路径
+ *	@param			cons：制定控制台
+ *					cmdline：命令行，用于解析出参数的
+ *	@notice			此处的函数需要修改以支持相对路径
+ */
+void cmd_cd(struct CONSOLE *cons, char *cmdline){
+	
+	struct FILEINFO* dirCur;
+	struct FILEINFO *dirTar; 
+	//TODO 获得切换目标
+	if(cmdline[3]=='.' &&cmdline[4]=='.'){
+		//TODO 返回上一层
+		cdBack(&pEnv);
+	}else{
+		dirCur = getDirCurrent(&pEnv);
+		dirTar = fileSearch(cmdline + 3, dirCur);
+		if(dirTar){
+			if(isFolder(dirTar)){
+				cdToDir(&pEnv, dirTar);
+			}else{
+				cons_putstr0(cons, "Target is not a folder!\n\n");
+			}
+		}else{
+			cons_putstr0(cons, "Target not exist!\n\n");
+		}
+	}
 }
 
 /**
@@ -286,45 +391,108 @@ void cmd_mem(struct CONSOLE *cons, unsigned int memtotal){
  *	@description	执行清屏命令
  *	@param			cons：指定的控制台
  */
-void cmd_cls(struct CONSOLE *cons){
+void cmd_clean(struct CONSOLE *cons){
 	int x, y;
 	struct SHEET *sheet = cons->sht;
-	for (y = 28; y < 28 + 128; y++) {
-		for (x = 8; x < 8 + 240; x++) {
+	for (y = 28; y < 28 + consContH; y++) {
+		for (x = 8; x < 8 + consContW; x++) {
 			sheet->buf[x + y * sheet->bxsize] = COL8_000000;
 		}
 	}
-	sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+	sheet_refresh(sheet, 8, 28, 8 + consContW, 28 + consContH);
 	cons->cur_y = 28;
 	return;
 }
 
 /**
- *	@description	执行查看文件命令
- *	@param			cons：指定控制台
+ *	@description	显示目录下的所有文件信息
  */
-void cmd_dir(struct CONSOLE *cons){
-	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600);
-	int i, j;
-	char s[30];
-	for (i = 0; i < 224; i++) {
-		if (finfo[i].name[0] == 0x00) {
-			break;
-		}
-		if (finfo[i].name[0] != 0xe5) {
-			if ((finfo[i].type & 0x18) == 0) {
-				sprintf(s, "filename.ext   %7d\n", finfo[i].size);
-				for (j = 0; j < 8; j++) {
-					s[j] = finfo[i].name[j];
+void cmd_ls(struct CONSOLE *cons){
+	struct FILEINFO* dirCur= getDirCurrent(&pEnv);
+	struct FILEINFO *finfo;
+	int size;
+	if(dirCur){
+		finfo = (struct FILEINFO *)malloc(dirCur->size);
+		file_loadfile(dirCur->clustno, dirCur->size, finfo);
+		size = dirCur->size/0x20;
+	}else{
+		finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600);
+		size = 224;
+	}
+	{
+		int i, j;
+		char s[30] = "..\n";
+		cons_putstr0(cons, s);
+		s[1]='\n';
+		s[2]=0x00;
+		cons_putstr0(cons, s);
+		//TODO 先显示出文件夹
+		for (i = 0; i < size; i++) {
+			if (finfo[i].name[0] == 0x00) {
+				break;
+			}
+			if (finfo[i].name[0] != 0xe5) {
+				if(finfo[i].type & 0x10){
+					//TODO 是目录
+					sprintf(s, "filename\n");
+					for (j = 0; j < 8; j++) {
+						s[j] = finfo[i].name[j];
+					}
+					cons_putstr0(cons, s);
 				}
-				s[ 9] = finfo[i].ext[0];
-				s[10] = finfo[i].ext[1];
-				s[11] = finfo[i].ext[2];
-				cons_putstr0(cons, s);
+			}
+		}
+		for (i = 0; i < size; i++) {
+			if (finfo[i].name[0] == 0x00) {
+				break;
+			}
+			if (finfo[i].name[0] != 0xe5) {
+				if ((finfo[i].type & 0x18) == 0) {
+					sprintf(s, "filename.ext   %7d\n", finfo[i].size);
+					for (j = 0; j < 8; j++) {
+						s[j] = finfo[i].name[j];
+					}
+					s[ 9] = finfo[i].ext[0];
+					s[10] = finfo[i].ext[1];
+					s[11] = finfo[i].ext[2];
+					cons_putstr0(cons, s);
+				}
 			}
 		}
 	}
-	cons_newline(cons);
+	if(dirCur){		
+		mfree(dirCur->size, finfo);
+	}
+}
+
+/**
+ *	@description	执行创建目录文件命令
+ *	@param			cons：指定控制台
+ */
+void cmd_mkdir(struct CONSOLE *cons){
+	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600);
+	struct FILEINFO *fp;
+
+	deleteByName("hello.hrb", 0);
+	deleteByName("hello2.hrb", 0);
+	deleteByName("hello3.hrb", 0);
+	deleteByName("A.hrb", 0);
+	deleteByName("make.bat", 0);
+
+	{
+		char ss[30];
+		createFile("xx", "txt", 0, 0);
+		fp = fileSearch("xx.txt", 0);
+		append(fp, "xxxxxxxxxx", 10);
+		sprintf(ss, "File create %p \n", fp);
+		cons_putstr0(cons, ss);
+		
+		createFile("folder", "", 0, 1);
+		fp = fileSearch("folder", 0);
+		createFile("xx", "txt", fp, 0);
+		createFile("ww", "ww", fp, 0);
+	}
+
 	return;
 }
 
@@ -334,13 +502,15 @@ void cmd_dir(struct CONSOLE *cons){
  *					fat：FAT表
  *					cmdline：命令行，用于解析出参数的
  */
-void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline){
+void cmd_cat(struct CONSOLE *cons, char *cmdline){
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
-	struct FILEINFO *finfo = file_search(cmdline + 5, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
 	char *p;
+	struct FILEINFO *finfo = fileSearch(cmdline + 4, 0);
 	if (finfo != 0) {
 		p = (char *) memman_alloc_4k(memman, finfo->size);
-		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
+		//sprintf(debugStr, "clustno %d, size %d", finfo->clustno, finfo->size);
+		//debug(debugLine++, debugStr);
+		file_loadfile(finfo->clustno, finfo->size, p);
 		cons_putstr1(cons, p, finfo->size);
 		memman_free_4k(memman, (int) p, finfo->size);
 	} else {
@@ -375,7 +545,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline){
 	name[i] = 0;
 
 	//TODO 寻找文件
-	finfo = file_search(name, (struct FILEINFO *) (ADR_DISKIMG + 0x002600), 224);
+	finfo = fileSearch(name, 0);
 	if (finfo == 0 && name[i - 1] != '.') {
 		//TODO 找不到，添加.hrb后缀进行查找
 		name[i    ] = '.';
@@ -392,7 +562,7 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline){
 		*((int *) 0xfe8) = (int) p;
 
 		//TODO 载入到内存中
-		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
+		file_loadfile(finfo->clustno, finfo->size, p);
 
 		//TODO 为该应用程序设置段
 		set_segmdesc(gdt + 1003, finfo->size - 1, (int) p, AR_CODE32_ER);

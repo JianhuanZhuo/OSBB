@@ -1,64 +1,46 @@
 /***************************************************************************************
- *	File Name				:		bootpack.h
- *	CopyRight				:		1.0
- *	ModuleName				:		
- *
- *	Create Data				:		2016/01/06
- *	Author/Corportation		:		ZhuoJianhuan
- *
- *	Abstract Description	:		鍚姩鐩樹富绋嬪簭
- *
- *--------------------------------Revision History--------------------------------------
- *	No	version		Data			Revised By			Item			Description
- *	1	v1.0		2016/01/06		ZhuoJianhuan						Create this file
- *
- ***************************************************************************************/
+*	File Name					:	ADT.h
+*	CopyRight					:	2015/03/09
+*	ModuleName					:	ADT/ADT
+*
+*	Create Data					:	2015/03/09
+*	Author/Corportation			:	ZhuoJianHuan
+*
+*	Abstract Description		:	抽象数据结构一般实现头文件，为抽象数据结构操作提供一致的环境
+*
+*--------------------------------Revision History--------------------------------------
+*	No	version		Data		Revised By			Item			Description
+*	1	V1.00		2015/03/09	ZhuoJianHuan		All				建立文件
+*
+***************************************************************************************/
 /**************************************************************
 *	Multi-Include-Prevent Section
 **************************************************************/
-#ifndef __BOOT_PACK_H
-#define __BOOT_PACK_H
+#ifndef __FN_ADT_H
+#define __FN_ADT_H
 /**************************************************************
 *	Debug switch Section
 **************************************************************/
-
 /**************************************************************
 *	Include File Section
 **************************************************************/
-#include "asmhead.h"
-#include "naskfunc.h"
-#include "fifo.h"
-#include "graphic.h"
-#include "memory.h"
-#include "sheet.h"
-#include "timer.h"
-#include "mtask.h"
-#include "int.h"
-#include "dsctbl.h"
-#include "keyboard.h"
-#include "mouse.h"
-#include "window.h"
-#include "file.h"
-#include "console.h"
-#include "stack.h"
-#include "pathStack.h"
 /**************************************************************
 *	Macro Define Section
 **************************************************************/
 /**************************************************************
 *	Struct Define Section
 **************************************************************/
+typedef enum{
+	OK				= 0x00,				//函数运行成功，无语义错误
+	ERROR			= 0x01,				//一般性错误
+	OVERFLOW		= 0x02,				//溢出错误
+	OBJINVALID		= 0x04				//对象无效
+}STATUS;
 /**************************************************************
 *	Global Variable Declare Section
 **************************************************************/
-/**************************************************************
-*	Prototype Declare Section
-**************************************************************/
+
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/
 #endif
-
-
-
-

@@ -110,6 +110,22 @@ unsigned int memman_alloc_4k(struct MEMMAN *man, unsigned int size);
  *	@return			释放成功返回0，否则返回-1
  */
 int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size);
+
+/**
+ *	@description	申请内存
+ *	@param			size：指定的大小
+ *	@return			申请到的首地址，申请失败返回0
+ */
+void *malloc(unsigned int size);
+
+
+/**
+ *	@description	malloc()函数申请到的内存
+ *	@param			addr：欲释放的内存的首地址
+ *					size：欲释放的内存的大小
+ *	@return			释放成功返回0，否则返回-1
+ */
+int mfree(unsigned int addr, unsigned int size);
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/
