@@ -121,7 +121,6 @@ void cmd_cd(struct CONSOLE *cons, char *cmdline);
 /**
  *	@description	输出文件内容
  *	@param			cons：制定控制台
- *					fat：FAT表
  *					cmdline：命令行，用于解析出参数的
  */
 void cmd_cat(struct CONSOLE *cons, char *cmdline);
@@ -145,8 +144,9 @@ void hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 /**
  *	@description	执行创建目录文件命令
  *	@param			cons：指定控制台
+ *					cmdline：命令行，用于解析出参数的
  */
-void cmd_mkdir(struct CONSOLE *cons);
+void cmd_mkdir(struct CONSOLE *cons, char *cmdline);
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/

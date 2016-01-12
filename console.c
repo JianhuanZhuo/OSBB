@@ -78,6 +78,12 @@ void console_task(struct SHEET *sheet, unsigned int memtotal){
 	//TODO 路径栈
 	initPathEnv(&pEnv);
 
+	//TODO 初始化测试数据
+	deleteByName("hello.hrb", 0);
+	deleteByName("hello2.hrb", 0);
+	deleteByName("hello3.hrb", 0);
+	deleteByName("a.hrb", 0);
+
 	//TODO 命令提示符
 	getPathCurrent(&pEnv, &pathLine);
 	cons_putstr0(&cons, pathLine);
@@ -272,12 +278,12 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 	
 	if (strcmp(cmdline, "mem") == 0) {
 		cmd_mem(cons, memtotal);
+	} else if (strcmp(cmdline, "test") == 0) {
+		init_login();
 	} else if (strcmp(cmdline, "clean") == 0) {
 		cmd_clean(cons);
 	} else if (strcmp(cmdline, "ls") == 0) {
 		cmd_ls(cons);
-	} else if (strcmp(cmdline, "mkdir") == 0) {
-		cmd_mkdir(cons);
 	} else if (strncmp(cmdline, "cat ", 4) == 0) {
 		cmd_cat(cons, cmdline);
 	} else if (strncmp(cmdline, "cd ", 3) == 0) {
@@ -286,6 +292,8 @@ void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int mem
 		cmd_rm(cons, cmdline+3);
 	} else if (strncmp(cmdline, "touch ", 6) == 0) {
 		cmd_touch(cons, cmdline+6);
+	} else if (strncmp(cmdline, "mkdir ", 6) == 0) {
+		cmd_mkdir(cons, cmdline+6);
 	} else if (cmdline[0] != 0) {
 		if (cmd_app(cons, fat, cmdline) == 0) {
 			//不是命令也不是应用程序
@@ -426,6 +434,8 @@ void cmd_ls(struct CONSOLE *cons){
 		s[1]='\n';
 		s[2]=0x00;
 		cons_putstr0(cons, s);
+		sprintf(debugStr, "size = %d", size);
+		debug(debugLine++ ,debugStr);
 		//TODO 先显示出文件夹
 		for (i = 0; i < size; i++) {
 			if (finfo[i].name[0] == 0x00) {
@@ -469,28 +479,19 @@ void cmd_ls(struct CONSOLE *cons){
  *	@description	执行创建目录文件命令
  *	@param			cons：指定控制台
  */
-void cmd_mkdir(struct CONSOLE *cons){
-	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600);
-	struct FILEINFO *fp;
+void cmd_mkdir(struct CONSOLE *cons, char *cmdline){
 
-	deleteByName("hello.hrb", 0);
-	deleteByName("hello2.hrb", 0);
-	deleteByName("hello3.hrb", 0);
-	deleteByName("A.hrb", 0);
-	deleteByName("make.bat", 0);
+	struct FILEINFO* dirCur;
+	dirCur = getDirCurrent(&pEnv);
+	int i;
+	char fileName[9];
+	for(i=0; i<8&cmdline[i]!=0x00; i++){
+		fileName[i]=cmdline[i];
+	}
+	fileName[i] = 0x00;
 
-	{
-		char ss[30];
-		createFile("xx", "txt", 0, 0);
-		fp = fileSearch("xx.txt", 0);
-		append(fp, "xxxxxxxxxx", 10);
-		sprintf(ss, "File create %p \n", fp);
-		cons_putstr0(cons, ss);
-		
-		createFile("folder", "", 0, 1);
-		fp = fileSearch("folder", 0);
-		createFile("xx", "txt", fp, 0);
-		createFile("ww", "ww", fp, 0);
+	if(createFile(fileName, "", dirCur, 1)){
+		cons_putstr0(cons, "File has exist!\n\n");
 	}
 
 	return;

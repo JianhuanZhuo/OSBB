@@ -418,7 +418,6 @@ int createFile(char *filename, char *ext, struct FILEINFO *dir, int f){
 		int res = isFolder(dir);
 		if(res){
 			//TODO 是子目录
-			
 			//TODO 同名检查
 			sprintf(strTemp, "%s.%s", filename, ext);
 			if(fileSearch(strTemp, dir) != 0){

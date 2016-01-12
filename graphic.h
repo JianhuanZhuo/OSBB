@@ -61,6 +61,11 @@ extern int debugLine;
 void init_palette(void);
 
 /**
+ *	@description	获得调色板的色块
+ */
+unsigned char getColor(unsigned char r, unsigned char g, unsigned char b);
+
+/**
  *	@description	设置调色板
  *	@param			start：设置起始标号
  *					end：设置终止标号
@@ -129,6 +134,24 @@ void putblock8_8(char *vram, int vxsize, int pxsize,int pysize, int px0, int py0
  *	@description	DEBUG指定行输出调试信息
  */
 void debug(int line, char *str);
+
+/**
+ *	@description	初始化图标
+ *	@param			mouse：存放鼠标图形的目标地址
+ *					bc：背景颜色
+ */
+void init_icon(char *mouse, char bc);
+
+/**
+ *	@description	显示任务栏
+ *	@param			vram：VRAM起始地址
+ *					x：屏幕宽度
+ *					y：屏幕高度
+ */
+void taskLine(char *vram, int x, int y);
+
+
+void init_login(void);
 /**************************************************************
 *	End-Multi-Include-Prevent Section
 **************************************************************/

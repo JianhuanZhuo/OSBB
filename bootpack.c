@@ -44,8 +44,8 @@ int mx, my, i, cursor_x, cursor_c;
 unsigned int memtotal;
 struct MOUSE_DEC mdec;
 struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
-unsigned char *buf_back, buf_mouse[256], *buf_win, *buf_cons;
-struct SHEET *sht_back, *sht_mouse, *sht_win, *sht_cons;
+unsigned char *buf_back, buf_mouse[256], *buf_win, *buf_cons, buf_icon[1024];
+struct SHEET *sht_back, *sht_mouse, *sht_win, *sht_cons, *sht_icon;
 struct TASK *task_a, *task_cons;
 struct TIMER *timer;
 int key_to = 0, key_shift = 0, key_leds = 0, keycmd_wait = -1;
@@ -93,6 +93,7 @@ void initGUI(void){
 	buf_back  = (unsigned char *) memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
 	sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1); /* 摟柧怓側偟 */
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
+	
 
 	/* sht_cons */
 	sht_cons = sheet_alloc(shtctl);
@@ -132,13 +133,20 @@ void initGUI(void){
 	mx = (binfo->scrnx - 16) / 2;
 	my = (binfo->scrny - 28 - 16) / 2;
 
+	//icon
+	sht_icon = sheet_alloc(shtctl);
+	sheet_setbuf(sht_icon, buf_icon, 32, 32, 99);
+	init_icon(buf_icon, 99);
+
 	sheet_slide(sht_back,  0,  0);
-	sheet_slide(sht_cons, 32,  4);
+	sheet_slide(sht_cons, 50,  30);
 	sheet_slide(sht_win,  64, 56);
+	sheet_slide(sht_icon, 10, 10);
 	sheet_slide(sht_mouse, mx, my);
+	sheet_updown(sht_win,   -1);
 	sheet_updown(sht_back,  0);
-	sheet_updown(sht_cons,  1);
-	sheet_updown(sht_win,   2);
+	sheet_updown(sht_icon,  2);
+	sheet_updown(sht_cons,  -1);
 	sheet_updown(sht_mouse, 3);
 }
 
@@ -178,6 +186,8 @@ void HariMain(void){
 	fifo32_put(&keycmd, KEYCMD_LED);
 	fifo32_put(&keycmd, key_leds);
 
+	
+	init_login();
 	for (;;) {
 		//TODO 接收键盘
 		if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0) {
@@ -351,9 +361,14 @@ void HariMain(void){
 						}
 					}
 
+					
+
 					//TODO 检查是否点击
-					if ((mdec.btn & 0x01) != 0) {
-						//sheet_slide(sht_win, mx - 80, my - 8);
+					if ((mdec.btn & 0x02) != 0) {
+						sheet_updown(sht_cons,  1);
+						taskLine(buf_back, binfo->scrnx, binfo->scrny);
+						sheet_updown(sht_back,  -1);
+						sheet_updown(sht_back,  0);
 					}
 				}
 			}//end of 鼠标输入
